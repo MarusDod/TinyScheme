@@ -1,0 +1,78 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: ea56211ba073ff8d0475dda17644af486197495adf88703a377b130db242a714
+
+name:           TinyScheme
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/Github username here/TinyScheme#readme>
+homepage:       https://github.com/Github username here/TinyScheme#readme
+bug-reports:    https://github.com/Github username here/TinyScheme/issues
+author:         Author name here
+maintainer:     Author email here
+copyright:      2019 Author name here
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/Github username here/TinyScheme
+
+library
+  exposed-modules:
+      BuiltIn
+      Eval
+      Lib
+      LispType
+      Parser
+  other-modules:
+      Paths_TinyScheme
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , containers >=0.6.5.1
+    , mtl
+    , parsec
+    , transformers
+  default-language: Haskell2010
+
+executable TinyScheme-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_TinyScheme
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      TinyScheme
+    , base >=4.7 && <5
+    , containers >=0.6.5.1
+    , mtl
+    , parsec
+    , transformers
+  default-language: Haskell2010
+
+test-suite TinyScheme-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_TinyScheme
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      TinyScheme
+    , base >=4.7 && <5
+    , containers >=0.6.5.1
+    , mtl
+    , parsec
+    , transformers
+  default-language: Haskell2010
