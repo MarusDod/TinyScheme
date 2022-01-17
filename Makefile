@@ -3,3 +3,6 @@ watch:
 
 exec:
 	stack exec TinyScheme-exe
+
+exec-scm:
+	stack exec TinyScheme-exe lisp/test.scm

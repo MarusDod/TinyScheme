@@ -10,15 +10,20 @@ import System.Environment
 import LispType
 import Parser
 import Text.ParserCombinators.Parsec (parse)
+import Eval
+import BuiltIn
 
 
 main :: IO ()
 main = do
-  --print $ parse parseLisp "scm" "(lambda () (+ x 2))"
+  print $ parse parseLisp "scm" "(lambda () (+ x 2))"
   (filepath:_) <- getArgs
   contents <- readFile filepath
-  print $ parse parseLisp filepath contents
-  
+  case parseTree filepath contents of
+    Left err -> print err
+    Right ast -> do
+        print ast
+        evalProgram ast
 
 
 --foo :: ContT () (State [Int]) ()
@@ -28,5 +33,6 @@ main = do
 --    a <- shiftT $ \k -> do
 --        lift $ forM_ [4..10] k
 --    lift $ modify (++ [a])
+--    ContT $ const $ return ()
 --
 --bar = print $ execState (runContT foo (const $ return ())) []

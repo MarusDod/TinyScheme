@@ -1,0 +1,6 @@
+(define a "fds")
+(print (+ 2 3) a)
+(define b (lambda (x) (lambda (y) (+ y x))))
+(define c (b 2))
+(print (c 5))
+(print (cons 4 '(1 2)))

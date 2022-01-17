@@ -70,17 +70,12 @@ module LispType where
   throwErr :: LispErr -> LispInterpreter a
   throwErr err = ContT $ \_ -> return $ Left err
   
-  emptyState :: IO LispState
-  emptyState = do
-    ref <- newIORef Map.empty
-    return $ LispState {
-        environment = ref,
-        stack = []
-    }
-    
+  newInterpreter :: LispInterpreter ()
+  newInterpreter = return ()
+  
   emptyEnv = Map.empty
   
-  nilValue = (LispCons [])
+  nilValue = LispCons []
   
   liftState = lift
   

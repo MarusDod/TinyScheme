@@ -1,7 +1,26 @@
 module BuiltIn where
   
   import LispType
-  import Eval
+  import Control.Monad.Cont (liftIO)
+  import Control.Monad
+  import qualified Data.Map as Map
+  import Data.IORef
+  
+  initialEnvironment :: Map.Map String LispData
+  initialEnvironment = Map.fromList [
+      ("+",LispBuiltin plus),
+      ("-",LispBuiltin minus),
+      ("*",LispBuiltin mult),
+      ("/",LispBuiltin divide),
+      ("print",LispBuiltin printFN),
+      ("cons",LispBuiltin cons)
+    ]
+    
+  convertToRef :: Map.Map String LispData -> IO Env
+  convertToRef m =
+    Map.fromList <$> forM (Map.toList m) (\(k,a) -> do
+      ref <- newIORef a
+      return (k,ref))
   
   plus :: BuiltinFn
   plus args =
@@ -18,3 +37,15 @@ module BuiltIn where
   divide :: BuiltinFn
   divide ((LispNumber a):args) =
     return . LispNumber . foldl div a $ map (\(LispNumber n) -> n) args
+    
+  cons :: BuiltinFn
+  cons (a:(LispCons rest):[]) =
+    return (LispCons (a:rest))
+
+  printFN :: BuiltinFn
+  printFN args = do
+    forM_ args (liftIO . print)
+    return nilValue
+    
+    
+    

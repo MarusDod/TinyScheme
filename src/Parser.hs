@@ -4,6 +4,9 @@ import Text.ParserCombinators.Parsec hiding (spaces)
 import LispType
 import qualified Data.Map as Map
 
+parseTree :: String -> String -> Either ParseError [LispData]
+parseTree = parse (manyTill parseLisp eof)
+
 parseLisp,parseDot,parseQuote,parseBool,parseList,parseSymbol,parseString,parseNumber :: Parser LispData
 parseLisp = spaces *> choice [
         parseNumber,
@@ -15,7 +18,7 @@ parseLisp = spaces *> choice [
         parseList
     ] <* spaces
     
-spaces = skipMany space
+spaces = skipMany (char ' ' <|> char '\n' <|> char '\t')
 
 parseSymbol = LispSymbol <$> many1 (letter <|> choice (map char "+-!?/*%"))
 
