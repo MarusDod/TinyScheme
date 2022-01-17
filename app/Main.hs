@@ -11,7 +11,6 @@ import LispType
 import Parser
 import Text.ParserCombinators.Parsec (parse)
 import Eval
-import BuiltIn
 
 
 main :: IO ()

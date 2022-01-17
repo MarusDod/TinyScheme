@@ -11,7 +11,6 @@ module Eval where
   import Control.Monad.IO.Class
   import Control.Monad.State
   import Control.Monad
-  import BuiltIn
   
   
   emptyState :: IO LispState
@@ -113,4 +112,106 @@ module Eval where
       case Map.lookup s stackFrame of
         Nothing -> Nothing
         Just var -> Just (s,var)
+    
+    
+    
+  initialEnvironment :: Map.Map String LispData
+  initialEnvironment = Map.fromList [
+      ("+",LispBuiltin plus),
+      ("-",LispBuiltin minus),
+      ("*",LispBuiltin mult),
+      ("/",LispBuiltin divide),
+      ("display",LispBuiltin printFN),
+      ("cons",LispBuiltin cons),
+      ("car",LispBuiltin car),
+      ("cdr",LispBuiltin cdr),
+      ("procedure?",LispBuiltin procedure),
+      ("number?",LispBuiltin number),
+      ("boolean?",LispBuiltin isBool),
+      ("list?",LispBuiltin isList),
+      ("string?",LispBuiltin isString),
+      ("call/cc",LispBuiltin callcc)
+    ]
+    
+  convertToRef :: Map.Map String LispData -> IO Env
+  convertToRef m =
+    Map.fromList <$> forM (Map.toList m) (\(k,a) -> do
+      ref <- newIORef a
+      return (k,ref))
+  
+  plus :: BuiltinFn
+  plus args =
+    return . LispNumber . sum $ map (\(LispNumber n) -> n) args
+    
+  mult :: BuiltinFn
+  mult args =
+    return . LispNumber . product $ map (\(LispNumber n) -> n) args
+    
+  minus :: BuiltinFn
+  minus ((LispNumber a):args) =
+    return . LispNumber . foldl (-) a $ map (\(LispNumber n) -> n) args
+    
+  divide :: BuiltinFn
+  divide ((LispNumber a):args) =
+    return . LispNumber . foldl div a $ map (\(LispNumber n) -> n) args
+    
+  cons :: BuiltinFn
+  cons (a:(LispCons rest):[]) =
+    return (LispCons (a:rest))
+    
+  car :: BuiltinFn
+  car ((LispCons (c:rest)):[]) =
+    return c
+    
+  cdr :: BuiltinFn
+  cdr ((LispCons (c:rest)):[]) =
+    return (LispCons rest)
+    
+  procedure :: BuiltinFn
+  procedure ((LispBuiltin _):[]) =
+    return (LispBool True)
+  procedure ((LispLambda _):[]) =
+    return (LispBool True)
+  procedure _ =
+    return (LispBool False)
+    
+  number :: BuiltinFn
+  number ((LispNumber _):[]) =
+    return (LispBool True)
+  number _ =
+    return (LispBool False)
+    
+  isBool :: BuiltinFn
+  isBool ((LispBool _):[]) =
+    return (LispBool True)
+  isBool _ =
+    return (LispBool False)
+    
+  isList :: BuiltinFn
+  isList ((LispCons _):[]) =
+    return (LispBool True)
+  isList ((LispDotList _ _):[]) =
+    return (LispBool True)
+  isList _ =
+    return (LispBool False)
+    
+  isString :: BuiltinFn
+  isString ((LispString _):[]) =
+    return (LispBool True)
+  isString _ =
+    return (LispBool False)
+
+  printFN :: BuiltinFn
+  printFN args = do
+    forM_ args (liftIO . print)
+    return nilValue
+    
+  callcc :: BuiltinFn
+  callcc [LispLambda lam] = callCC $ \k -> do
+    let cc :: BuiltinFn
+        cc [ret] = k ret
+    evalLambda lam [LispBuiltin cc]
+    
+    
+    
     

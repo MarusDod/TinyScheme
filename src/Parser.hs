@@ -3,6 +3,7 @@ module Parser where
 import Text.ParserCombinators.Parsec hiding (spaces)
 import LispType
 import qualified Data.Map as Map
+import Control.Monad.Cont (void)
 
 parseTree :: String -> String -> Either ParseError [LispData]
 parseTree = parse (manyTill parseLisp eof)
@@ -18,7 +19,10 @@ parseLisp = spaces *> choice [
         parseList
     ] <* spaces
     
-spaces = skipMany (char ' ' <|> char '\n' <|> char '\t')
+spaces = skipMany (char ' ' <|> char '\n' <|> char '\t' <|> (comments >> return ' '))
+
+comments :: Parser ()
+comments = char ';' >> manyTill anyToken (void (char '\n') <|> void eof) >> return ()
 
 parseSymbol = LispSymbol <$> many1 (letter <|> choice (map char "+-!?/*%"))
 

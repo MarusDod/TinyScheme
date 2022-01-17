@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ea56211ba073ff8d0475dda17644af486197495adf88703a377b130db242a714
+-- hash: f8a9841c036fff228b05735c9a168c8fb04dd52514d3f09f4e3d18f95f4c90ff
 
 name:           TinyScheme
 version:        0.1.0.0
@@ -27,7 +27,6 @@ source-repository head
 
 library
   exposed-modules:
-      BuiltIn
       Eval
       Lib
       LispType
