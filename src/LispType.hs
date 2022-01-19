@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module LispType where
   
   import Data.IORef
@@ -10,12 +12,14 @@ module LispType where
   type EnvRef = IORef Env
   
   type Stack = [Env]
+  type This = Stack
   
   type LispThrowErr = Either LispErr LispData
   
   data LispState = LispState {
     environment :: EnvRef,
-    stack :: Stack
+    stack :: Stack,
+    this :: This
   }
   
   type LispInterpreter a = ContT LispThrowErr (StateT LispState IO) a
@@ -66,6 +70,13 @@ module LispType where
     show (LispDotList n dot) = "(" ++ unwords (map show n) ++ " . " ++ show dot ++ ")"
     show (LispBuiltin _) = "<builtin-primitive>"
     show (LispLambda _) = "<lambda>"
+    
+  clone :: IORef LispData ->  IO (IORef LispData)
+  clone ref =
+    readIORef ref >>= \case
+        LispCons _ -> return ref
+        LispDotList _ _ -> return ref
+        a -> newIORef a
 
   throwErr :: LispErr -> LispInterpreter a
   throwErr err = ContT $ \_ -> return $ Left err
@@ -81,6 +92,13 @@ module LispType where
   
   getStack :: LispInterpreter Stack
   getStack = stack <$> liftState get
+  
+  getThis :: LispInterpreter This
+  getThis = this <$> liftState get
+  
+  addToThis :: String -> (IORef LispData) -> LispInterpreter ()
+  addToThis nm var = do
+    modifyStack $ \s -> Map.insert nm var (head s) : tail s
   
   getEnvironment :: LispInterpreter EnvRef
   getEnvironment = environment <$> liftState get
@@ -108,10 +126,6 @@ module LispType where
     x <- fn
     popStackFrame
     return x
-    
-    
-    
-    
     
     
     

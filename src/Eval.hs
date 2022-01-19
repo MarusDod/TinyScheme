@@ -52,10 +52,25 @@ module Eval where
             
   eval (LispCons ((LispSymbol "define"):(LispSymbol sym):var:[])) = do
     var' <- eval var
-    iovar <- liftIO $ newIORef var'
-    e <- getEnvironment
-    liftIO $ modifyIORef' e $ Map.insert sym iovar
-    return var'
+    defineVar sym var'
+  eval (LispCons ((LispSymbol "set!"):(LispSymbol sym):var:[])) = do
+    (listToMaybe <$> getStack) >>= (\case
+        Nothing -> do
+            e <- (liftIO . readIORef) =<< getEnvironment
+            if isJust (Map.lookup sym e) then do
+              var' <- eval var
+              defineVar sym var'
+            else
+              throwErr $ ErrUndefined sym
+        Just st -> do
+            if isJust (Map.lookup sym st) then do
+                var' <- eval var
+                iovar <- liftIO $ newIORef var'
+                addToStackFrame sym iovar
+                return var'
+            else
+              throwErr $ ErrUndefined sym)
+        
   eval (LispCons ((LispSymbol "lambda"):(LispCons args):body)) = do
     capturedEnv <- getSymbols body
     
@@ -112,7 +127,15 @@ module Eval where
       case Map.lookup s stackFrame of
         Nothing -> Nothing
         Just var -> Just (s,var)
-    
+        
+
+
+  defineVar :: String -> LispData -> LispInterpreter LispData
+  defineVar sym var = do
+        iovar <- liftIO $ newIORef var
+        e <- getEnvironment
+        liftIO $ modifyIORef' e $ Map.insert sym iovar
+        return var
     
     
   initialEnvironment :: Map.Map String LispData
@@ -121,7 +144,12 @@ module Eval where
       ("-",LispBuiltin minus),
       ("*",LispBuiltin mult),
       ("/",LispBuiltin divide),
+      ("=",LispBuiltin eqFN),
+      (">",LispBuiltin greaterFN),
+      ("<",LispBuiltin lowerFN),
+      ("not",LispBuiltin notFN),
       ("display",LispBuiltin printFN),
+      ("inspectStack",LispBuiltin printStackFrame),
       ("cons",LispBuiltin cons),
       ("car",LispBuiltin car),
       ("cdr",LispBuiltin cdr),
@@ -158,6 +186,22 @@ module Eval where
   cons :: BuiltinFn
   cons (a:(LispCons rest):[]) =
     return (LispCons (a:rest))
+    
+  eqFN :: BuiltinFn
+  eqFN ((LispNumber n):(LispNumber m):[]) =
+    return (LispBool $ n == m)
+    
+  lowerFN :: BuiltinFn
+  lowerFN ((LispNumber n):(LispNumber m):[]) =
+    return (LispBool $ n < m)
+    
+  greaterFN :: BuiltinFn
+  greaterFN ((LispNumber n):(LispNumber m):[]) =
+    return (LispBool $ n > m)
+    
+  notFN :: BuiltinFn
+  notFN ((LispBool n):[]) =
+    return (LispBool $ not n)
     
   car :: BuiltinFn
   car ((LispCons (c:rest)):[]) =
@@ -206,10 +250,24 @@ module Eval where
     forM_ args (liftIO . print)
     return nilValue
     
+  printStackFrame :: BuiltinFn
+  printStackFrame _ = do
+    currStack <- getStack
+    liftIO $ print "inspecting..."
+    forM_ currStack $ \e -> do
+      liftIO $ putStrLn "\tframe --------"
+      forM_ (Map.toList e) $ \(k,aref) -> do
+        a <- liftIO $ readIORef aref
+        liftIO . putStrLn $ "\t\tkey: " ++ show k ++ ", value: " ++ show a
+    return nilValue
+    
   callcc :: BuiltinFn
   callcc [LispLambda lam] = callCC $ \k -> do
+    saveStack <- getStack
     let cc :: BuiltinFn
-        cc [ret] = k ret
+        cc [ret] = do
+            modifyStack $ const saveStack
+            k ret
     evalLambda lam [LispBuiltin cc]
     
     

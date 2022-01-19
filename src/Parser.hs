@@ -24,7 +24,7 @@ spaces = skipMany (char ' ' <|> char '\n' <|> char '\t' <|> (comments >> return 
 comments :: Parser ()
 comments = char ';' >> manyTill anyToken (void (char '\n') <|> void eof) >> return ()
 
-parseSymbol = LispSymbol <$> many1 (letter <|> choice (map char "+-!?/*%"))
+parseSymbol = LispSymbol <$> many1 (letter <|> choice (map char "<>=+-!?/*%"))
 
 parseBool = LispBool . strToBool <$> (string "#t" <|> string "#f")
     where strToBool "#t" = True

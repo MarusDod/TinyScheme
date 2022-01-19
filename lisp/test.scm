@@ -1,9 +1,12 @@
-(define a "fds")
-;(define b (lambda (x) (lambda (y) (+ y x))))
+;(define a "fds")
+;(define b (lambda (x) (lambda (y)
+;                    (inspectStack)
+;                    (+ y x))))
 ;(define c (b 2))
-;(display (boolean? 3))
-(display (+ 2 3) a)
 ;(display (c 5))
+;(display (+ 2 3) a)
+
+;(display (boolean? 3))
 ;(display (car (cdr (cons 4 '(1 2)))))
 ;
 (define ff (call/cc (lambda (cc)
@@ -11,6 +14,7 @@
                               (display "cc")
                               (cc x)))))
 
+(inspectStack)
 (if (procedure? ff)
           (ff 4)
           (display ff))
