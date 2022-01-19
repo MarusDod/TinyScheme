@@ -12,7 +12,7 @@ module LispType where
   type EnvRef = IORef Env
   
   type Stack = [Env]
-  type This = Stack
+  type This = Env
   
   type LispThrowErr = Either LispErr LispData
   

@@ -1,0 +1,5 @@
+(define loop (lambda (fn)
+               (display '>)
+               (displayln (eval (fn)))
+               (loop fn)))
+(loop read)

@@ -3,9 +3,14 @@
 module Eval where
   
   import LispType
+  import Parser
   
   import Data.IORef
+  import System.IO
+  import Text.ParserCombinators.Parsec (parse)
+  import Control.Concurrent
   import Data.Maybe
+  
   import qualified Data.Map as Map
   import Control.Monad.Trans.Cont
   import Control.Monad.IO.Class
@@ -80,6 +85,8 @@ module Eval where
         func = body
     }
     
+  eval (LispCons ((LispSymbol "quote"):x:[])) = return x
+  
   eval (LispCons ((LispSymbol "if"):cond:condTrue:condFalse:[])) = do
     isTrue <- eval cond
     case isTrue of
@@ -137,6 +144,7 @@ module Eval where
         liftIO $ modifyIORef' e $ Map.insert sym iovar
         return var
     
+  --  todo multiple stack frames and closure
     
   initialEnvironment :: Map.Map String LispData
   initialEnvironment = Map.fromList [
@@ -149,6 +157,9 @@ module Eval where
       ("<",LispBuiltin lowerFN),
       ("not",LispBuiltin notFN),
       ("display",LispBuiltin printFN),
+      ("displayln",LispBuiltin printlnFN),
+      ("read",LispBuiltin getlineFN),
+      ("eval",LispBuiltin evalFN),
       ("inspectStack",LispBuiltin printStackFrame),
       ("cons",LispBuiltin cons),
       ("car",LispBuiltin car),
@@ -244,11 +255,24 @@ module Eval where
     return (LispBool True)
   isString _ =
     return (LispBool False)
-
+    
+  evalFN :: BuiltinFn
+  evalFN ((LispString str):_) = eval $ either  (const nilValue) id $ parse parseLisp "<stdin>" str
+  
   printFN :: BuiltinFn
   printFN args = do
-    forM_ args (liftIO . print)
+    forM_ args (\a -> liftIO $ putStr (show a) >> hFlush stdout)
     return nilValue
+    
+  printlnFN :: BuiltinFn
+  printlnFN args = do
+    forM_ args (\a -> liftIO $ print a >> hFlush stdout)
+    return nilValue
+    
+  getlineFN :: BuiltinFn
+  getlineFN _ = do
+    line <- liftIO $! getLine
+    return (LispString line)
     
   printStackFrame :: BuiltinFn
   printStackFrame _ = do
