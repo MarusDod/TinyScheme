@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f8a9841c036fff228b05735c9a168c8fb04dd52514d3f09f4e3d18f95f4c90ff
+-- hash: 150bdad73f130d9536ccda8d508b58d58cacb42c8655304117d10cd33d7fcb9f
 
 name:           TinyScheme
 version:        0.1.0.0
@@ -43,7 +43,7 @@ library
     , transformers
   default-language: Haskell2010
 
-executable TinyScheme-exe
+executable TinyScheme
   main-is: Main.hs
   other-modules:
       Paths_TinyScheme

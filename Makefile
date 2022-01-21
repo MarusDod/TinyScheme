@@ -2,16 +2,16 @@ watch:
 	stack build --file-watch --fast
 
 exec:
-	stack exec TinyScheme-exe
+	stack exec TinyScheme
 
 exec-scm:
-	stack exec TinyScheme-exe lisp/test.scm
+	stack exec -- TinyScheme --file=lisp/test.scm
 
 exec-define:
-	stack exec TinyScheme-exe lisp/define.scm
+	stack exec -- TinyScheme --file=lisp/define.scm
 
 exec-factorial:
-	stack exec TinyScheme-exe lisp/factorial.scm
+	stack exec -- TinyScheme --file=lisp/factorial.scm
 
 ramdisk:
 	mkdir /dev/shm/.stack-work

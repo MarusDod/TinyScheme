@@ -23,4 +23,5 @@ Scheme interpreter written in haskell.
 
     stack install
 
-    TinyScheme-exe ...ARGS
+    TinyScheme
+    TinyScheme ...FILE

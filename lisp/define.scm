@@ -1,5 +1,7 @@
 (define a (lambda (x) (lambda () (lambda () x))))
-(display (((a 5))))
+(define (run a b) (+ a b))
+(displayln (run 4 6))
+(displayln (((a 5))))
 ;(define a '(1 2 3))
 ;(define b a)
 ;(set! a '(1 2 3 4))

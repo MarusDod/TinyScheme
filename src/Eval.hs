@@ -58,6 +58,13 @@ module Eval where
   eval (LispCons ((LispSymbol "define"):(LispSymbol sym):var:[])) = do
     var' <- eval var
     defineVar sym var'
+  eval (LispCons ((LispSymbol "define"):(LispCons ((LispSymbol sym):args)):body)) = do
+    symbols <- getSymbols body
+    defineVar sym $ LispLambda $ LambdaFn {
+        closure = symbols,
+        arguments = args,
+        func = body
+    }
   eval (LispCons ((LispSymbol "set!"):(LispSymbol sym):var:[])) = do
     (listToMaybe <$> getStack) >>= (\case
         Nothing -> do

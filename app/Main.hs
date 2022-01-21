@@ -21,7 +21,13 @@ module Main where
       case parseTree filepath contents of
         Left err -> print err
         Right ast -> do
-            print ast
+            evalProgram ast
+            
+    compileString :: String -> IO ()
+    compileString code = do
+      case parseTree "<text>" code of
+        Left err -> print err
+        Right ast -> do
             evalProgram ast
             
     main :: IO ()
@@ -32,8 +38,14 @@ module Main where
           let opt = foldl (flip ($)) defaultOptions op
           if optShowVersion opt then
             print "TinyScheme 1.0.0"
-          else maybe (compileFile "lisp/repl.scm") compileFile (optFilePath opt)
+          else maybe (compileString replCode) compileFile (optFilePath opt)
         (_,_,errs) -> ioError $ userError $ usageInfo "Usage:" optionsDesc
+        
+    replCode = "(define loop (lambda (fn)\
+                       \(display '>)\
+                       \(displayln (eval (fn)))\
+                       \(loop fn)))\
+                \(loop read)"
 
     data Options = Options {
         optShowVersion :: Bool,

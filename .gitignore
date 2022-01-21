@@ -21,6 +21,7 @@ cabal.sandbox.config
 *.aux
 *.hp
 *.eventlog
+.stack-work
 .stack-work/
 cabal.project.local
 cabal.project.local~
@@ -32,11 +33,7 @@ cabal.project.local~
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 
 # User-specific stuff
-.idea/**/workspace.xml
-.idea/**/tasks.xml
-.idea/**/usage.statistics.xml
-.idea/**/dictionaries
-.idea/**/shelf
+.idea/
 
 # AWS User-specific
 .idea/**/aws.xml
