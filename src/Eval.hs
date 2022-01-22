@@ -16,6 +16,7 @@ module Eval where
   import Control.Monad.IO.Class
   import Control.Monad.State
   import Control.Monad
+  import Data.List
   
   
   emptyState :: IO LispState
@@ -23,15 +24,19 @@ module Eval where
     ref <- newIORef =<< convertToRef initialEnvironment
     return $ LispState {
         environment = ref,
-        stack = []
+        stack = [],
+        this = mempty
     }
     
   runInterpreter :: LispInterpreter () -> IO ()
-  runInterpreter interpreter =
+  runInterpreter interpreter = do
     emptyState >>=
-        runStateT (runContT interpreter (const $ return $ Right nilValue)) >>
-            return ()
-            
+        runStateT (runContT interpreter $ const $ return $ Right nilValue) >>= \(a,_) ->
+            handleRet a
+        where
+          handleRet (Left err) = hPutStrLn stderr $ "error: " ++ show err
+          handleRet (Right _) = return ()
+          
   evalProgram :: [LispData] -> IO ()
   evalProgram lsp =
     runInterpreter $
@@ -39,22 +44,15 @@ module Eval where
 
   eval :: LispData -> LispInterpreter LispData
   eval (LispQuote q) = return q
-  eval (LispSymbol sym) = callCC $ \exit -> do
-    frameMaybe <- listToMaybe <$> getStack
-    case frameMaybe of
-      Nothing -> lookupEnv >>= \case
-        Nothing -> throwErr (ErrUndefined sym)
-        Just var -> liftIO . readIORef $ var
-      Just frame -> case Map.lookup sym frame of
-        Just var -> liftIO . readIORef $ var
-        Nothing -> lookupEnv >>= \case
+  eval (LispSymbol sym) =
+    lookupStack sym >>= \case
+      Just a -> liftIO $ readIORef a
+      Nothing -> lookupThis sym >>= \case
+        Just a -> liftIO $ readIORef a
+        Nothing -> lookupEnv sym >>= \case
             Nothing -> throwErr (ErrUndefined sym)
             Just var -> liftIO . readIORef $ var
         
-    where lookupEnv = do
-            env <- (liftIO . readIORef) =<< getEnvironment
-            return $ Map.lookup sym env
-            
   eval (LispCons ((LispSymbol "define"):(LispSymbol sym):var:[])) = do
     var' <- eval var
     defineVar sym var'
@@ -66,22 +64,28 @@ module Eval where
         func = body
     }
   eval (LispCons ((LispSymbol "set!"):(LispSymbol sym):var:[])) = do
-    (listToMaybe <$> getStack) >>= (\case
+    lookupStack sym >>= (\case
+        Just v -> do
+            var' <- (liftIO . newIORef) =<< eval var
+            modifyStack $ snd . mapAccumL (\stop frame -> do
+                if stop then
+                  (True,frame)
+                else
+                    case Map.lookup sym frame of
+                        Nothing -> (True,frame)
+                        Just _ -> (True,Map.insert sym var' frame)) False
+            liftIO $ readIORef v
         Nothing -> do
-            e <- (liftIO . readIORef) =<< getEnvironment
-            if isJust (Map.lookup sym e) then do
-              var' <- eval var
-              defineVar sym var'
-            else
-              throwErr $ ErrUndefined sym
-        Just st -> do
-            if isJust (Map.lookup sym st) then do
-                var' <- eval var
-                iovar <- liftIO $ newIORef var'
-                addToStackFrame sym iovar
-                return var'
-            else
-              throwErr $ ErrUndefined sym)
+            (Map.lookup sym <$> getThis) >>= \case
+                Just ref -> do
+                    var' <- eval var
+                    oldRef <- liftIO $ readIORef ref
+                    liftIO $ writeIORef ref var'
+                    return oldRef
+                Nothing ->
+                    (Map.lookup sym <$> ((liftIO . readIORef) =<< getEnvironment)) >>= \case
+                        Just _ -> eval var >>= defineVar sym
+                        Nothing -> throwErr $ ErrUndefined sym)
         
   eval (LispCons ((LispSymbol "lambda"):(LispCons args):body)) = do
     capturedEnv <- getSymbols body
@@ -92,8 +96,13 @@ module Eval where
         func = body
     }
     
-  eval (LispCons ((LispSymbol "quote"):x:[])) = return x
-  
+  eval (LispCons [LispSymbol "quote", x]) = return x
+  eval (LispCons ((LispSymbol "let"):(LispCons bindings):body)) = do
+        bindings' <- Map.fromList <$> forM bindings (\(LispCons [LispSymbol nm, var]) ->
+            eval var >>= (liftIO . newIORef) >>= \v -> return (nm,v))
+        withNewStackFrame bindings' $
+            foldM (const eval) nilValue body
+        
   eval (LispCons ((LispSymbol "if"):cond:condTrue:condFalse:[])) = do
     isTrue <- eval cond
     case isTrue of
@@ -117,32 +126,24 @@ module Eval where
     argBindings <- Map.fromList <$> zipWithM (\(LispSymbol a) b -> do
         b' <- liftIO $ newIORef b
         return (a,b')) (arguments fn) args
-    withNewStackFrame (argBindings `Map.union` closure fn) $ do
+    withNewStack (closure fn) $ withNewStackFrame argBindings $ do
       foldM (const eval) nilValue (func fn)
   
   
   getSymbols :: [LispData] -> LispInterpreter Env
   getSymbols body = callCC $ \exit -> do
-    stackFrameMaybe <- listToMaybe <$> getStack
-    when (isNothing stackFrameMaybe) $ exit emptyEnv
-    
-    let stackFrame = fromJust stackFrameMaybe
-    
-    let iterateBody = \case
+    getStack >>= \s -> when (null s) $ exit emptyEnv
+    Map.fromList . concat <$> traverse iterateBody body
+         where iterateBody = \case
                 (LispSymbol n) ->
-                   case Map.lookup n stackFrame of
-                        Nothing -> return []
-                        Just _ -> return [n]
+                   lookupStack n >>= \case
+                        Nothing -> lookupThis n >>= \case
+                            Nothing -> return []
+                            Just a -> return [(n,a)]
+                        Just a -> return [(n,a)]
                 (LispCons lst) -> concat <$> traverse iterateBody lst
                 (LispDotList lst dot) -> (++) <$> iterateBody dot <*> (concat <$> traverse iterateBody lst)
                 _ -> return []
-    symbols <- concat <$> traverse iterateBody body
-    return $ Map.fromList $ catMaybes $ flip map symbols $ \s -> do
-      case Map.lookup s stackFrame of
-        Nothing -> Nothing
-        Just var -> Just (s,var)
-        
-
 
   defineVar :: String -> LispData -> LispInterpreter LispData
   defineVar sym var = do
@@ -150,8 +151,6 @@ module Eval where
         e <- getEnvironment
         liftIO $ modifyIORef' e $ Map.insert sym iovar
         return var
-    
-  --  todo multiple stack frames and closure
     
   initialEnvironment :: Map.Map String LispData
   initialEnvironment = Map.fromList [

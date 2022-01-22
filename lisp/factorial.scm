@@ -3,4 +3,5 @@
       1
       (* x (fact (- x 1))))))
 
-(display (fact 4))
+(displayln (fact 4))
+(display x)

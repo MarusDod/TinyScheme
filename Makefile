@@ -13,6 +13,9 @@ exec-define:
 exec-factorial:
 	stack exec -- TinyScheme --file=lisp/factorial.scm
 
+exec-let:
+	stack exec -- TinyScheme --file=lisp/let.scm
+
 ramdisk:
 	mkdir /dev/shm/.stack-work
 	ln -s /dev/shm/.stack-work .stack-work

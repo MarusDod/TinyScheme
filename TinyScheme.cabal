@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 150bdad73f130d9536ccda8d508b58d58cacb42c8655304117d10cd33d7fcb9f
+-- hash: 55ba036da8d2d68ce7c4b898fe9f26c893886145416a736e2c412c31d4090c7e
 
 name:           TinyScheme
 version:        0.1.0.0
@@ -38,6 +38,7 @@ library
   build-depends:
       base >=4.7 && <5
     , containers >=0.6.5.1
+    , monadlist
     , mtl
     , parsec
     , transformers
@@ -54,6 +55,7 @@ executable TinyScheme
       TinyScheme
     , base >=4.7 && <5
     , containers >=0.6.5.1
+    , monadlist
     , mtl
     , parsec
     , transformers
@@ -71,6 +73,7 @@ test-suite TinyScheme-test
       TinyScheme
     , base >=4.7 && <5
     , containers >=0.6.5.1
+    , monadlist
     , mtl
     , parsec
     , transformers

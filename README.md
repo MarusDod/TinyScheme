@@ -1,13 +1,13 @@
 # TinyScheme
-Scheme interpreter written in haskell.
-- includes many common scheme functions
+Scheme interpreter written in haskell. Contains:
 - first class lambdas
-- can define and set vars
-- can pretty much define the rest of the standard library without changing source code
+- define and set vars
+- let syntax
+- many common lisp functions (examples in lisp folder)
+- repl
 - **call/cc support**
  
 #### TODO
-- let syntax
 - macro rules
 - vectors
 - ...

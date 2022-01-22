@@ -96,9 +96,21 @@ module LispType where
   getThis :: LispInterpreter This
   getThis = this <$> liftState get
   
-  addToThis :: String -> (IORef LispData) -> LispInterpreter ()
-  addToThis nm var = do
-    modifyStack $ \s -> Map.insert nm var (head s) : tail s
+  lookupThis :: String -> LispInterpreter (Maybe (IORef LispData))
+  lookupThis nm =
+    Map.lookup nm <$> getThis
+  
+  setThis :: This -> LispInterpreter ()
+  setThis newThis = do
+    liftState $ modify $ \s -> s {this = newThis}
+    
+  changeThis :: String -> LispData -> LispInterpreter LispData
+  changeThis nm lsp =
+    lookupThis nm >>= \case
+        Nothing -> throwErr $ ErrUndefined $ "wtf no closure variable set with name: " <> nm
+        Just ref -> liftIO (readIORef ref) >>= \x ->
+            liftIO (writeIORef ref lsp) >>
+            return x
   
   getEnvironment :: LispInterpreter EnvRef
   getEnvironment = environment <$> liftState get
@@ -106,6 +118,21 @@ module LispType where
   modifyStack :: (Stack -> Stack) -> LispInterpreter ()
   modifyStack fn =
     liftState $ modify $ \s -> s {stack = fn $ stack s}
+    
+  lookupStack :: String -> LispInterpreter (Maybe (IORef LispData))
+  lookupStack nm = do
+    getStack >>= \st ->
+        foldM iterateStack Nothing st
+            where iterateStack :: Maybe (IORef LispData) -> Env -> LispInterpreter (Maybe (IORef LispData))
+                  iterateStack mres a = 
+                    case mres of
+                       Just res -> return $ Just res
+                       Nothing -> return $ Map.lookup nm a
+                       
+  lookupEnv :: String -> LispInterpreter (Maybe (IORef LispData))
+  lookupEnv sym = do
+       env <- (liftIO . readIORef) =<< getEnvironment
+       return $ Map.lookup sym env
     
   pushStackFrame :: LispInterpreter ()
   pushStackFrame = do
@@ -127,5 +154,15 @@ module LispType where
     popStackFrame
     return x
     
+  withNewStack :: Env -> LispInterpreter a -> LispInterpreter a
+  withNewStack clos fn = do
+    oldThis <- getThis
+    oldStack <- getStack
+    setThis clos
+    modifyStack $ const []
+    ret <- fn
+    setThis oldThis
+    modifyStack $ const oldStack
+    return ret
     
     
